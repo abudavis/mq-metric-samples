@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mq-metric-prometheus
+  labels:
+    app: mq-metric-prometheus-app
+spec:
+  containers:
+    - name: mq-metric-prometheus
+      image: image-registry.openshift-image-registry.svc:5000/mq/mq-metric-prometheus:latest
+      command: ['sh', '-c', '/opt/mqm/bin/runmqakm -keydb -create -db key.kdb -pw password -type cms -expire 999 -stash; /opt/mqm/bin/runmqakm -cert -add -db key.kdb -file /home/key/tls.key -label ibmwebspheremqmetrics -stashed -type pkcs12 -format ascii; /opt/mqm/bin/runmqakm -cert -add -file /home/cacrt/ca.crt -trust enable -db key.kdb -format binary -stashed; /opt/mqm/bin/runmqakm -cert -list personal -db key.kdb -stashed; /opt/mqm/bin/runmqakm -cert -list CA -db key.kdb -stashed; /opt/bin/mq_prometheus']
+      envFrom:
+      - configMapRef:
+          name: metrics-configuration
+      - secretRef:
+          name: metrics-credentials
+      volumeMounts:
+      - name: cacrt
+        mountPath: "/home/cacrt"
+        readOnly: true
+      - name: ccdt
+        mountPath: "/home/ccdt"
+        readOnly: true
+      - name: key
+        mountPath: "/home/key"
+        readOnly: true
+      - name: mqclientini
+        mountPath: "/home/mqclientini"
+        readOnly: true
+  volumes:
+  - name: cacrt
+    secret:
+      secretName: cacerts
+      optional: false
+      items:
+      - key: ca.crt
+        path: ca.crt
+  - name: ccdt
+    configMap:
+      name: ccdt
+      items:
+      - key: ccdt.json
+        path: ccdt.json
+  - name: key
+    secret:
+      secretName: tinep12
+      optional: false
+      items:
+      - key: tls.key
+        path: tls.key
+  - name: mqclientini
+    configMap:
+      name: mqclientini
+      items:
+      - key: mqclient.ini
+        path: mqclient.ini
+  restartPolicy: OnFailure
