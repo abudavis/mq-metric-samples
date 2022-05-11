@@ -43,7 +43,7 @@ spec:
         path: ccdt.json
   - name: key
     secret:
-      secretName: tinep12
+      secretName: key
       optional: false
       items:
       - key: tls.key
